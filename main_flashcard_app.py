@@ -124,8 +124,6 @@ async def generate_with_active_llm(system_prompt, user_prompt, image_bytes=None,
             prompt_to_send = f"{user_prompt}\n\n[Context: User has also uploaded an image.]" if image_bytes else user_prompt
             return await active_llm.generate_text(system_prompt, prompt_to_send, output_format_json=output_json)
         else: 
-            # Fallback if name/module check also fails (shouldn't happen if imports are sane)
-            # Or if an entirely different object type was somehow put into active_llm
             st.error(f"Critical Error: LLM processor type {instance_class_name} from module {instance_module_name} is unknown.")
             logger.error(f"CRITICAL: Unknown LLM processor type after name/module check: {instance_class_name} (Module: {instance_module_name}).")
             return {"error": f"Unknown LLM processor type: {instance_class_name}", "raw_output": ""}
@@ -134,7 +132,7 @@ async def generate_with_active_llm(system_prompt, user_prompt, image_bytes=None,
         logger.error(f"Exception in LLM call dispatch: {e}", exc_info=True)
         return {"error": f"LLM call dispatch error: {e}", "raw_output": ""}
 
-# --- Sidebar UI --- (Keep this section as it was in the last full main_flashcard_app.py)
+# --- Sidebar UI --- 
 with st.sidebar:
     st.title("🧠 LLM Flashcards")
     st.header("Card Spaces")
@@ -172,7 +170,7 @@ with st.sidebar:
     
     st.markdown("---"); st.header("Settings")
     
-    def on_toggle_gemini_changed(): # Renamed to avoid conflict if st.session_state.use_gemini is the key
+    def on_toggle_gemini_changed(): 
         logger.info(f"Gemini toggle callback. New state via st.session_state.use_gemini: {st.session_state.use_gemini}")
         initialize_llm_processors()
 
