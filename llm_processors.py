@@ -5,10 +5,6 @@ from google import genai
 from google.genai import types as google_genai_types
 import logging
 import asyncio
-# import inspect # Not strictly needed for runtime, can be for debugging
-
-# Use Streamlit's logger for consistency if running within Streamlit context
-# If this file might be used outside Streamlit, standard logging is fine
 try:
     import streamlit as st
     logger = st.logger.get_logger(__name__)
