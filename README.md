@@ -124,3 +124,157 @@ Accessible from both single card and deck study views, focusing on the current f
 *   [ ] More robust error handling and user feedback for LLM generation failures.
 *   [ ] UI/UX refinements for even smoother interactions.
 *   [ ] Option for user to select different LLM models from a list (if multiple are available on Ollama or via Gemini).
+
+## Use-case Diagram 
+```
+        +-----------------------------+
+        |        USER (Learner)       |
+        +--------------+--------------+
+                       |
++----------------------V-----------------------+
+| Start/Open LLM Flashcards Application        |
++----------------------V-----------------------+
+                       |
+         [ User has Card Spaces? ] --(No)--> [ Create New Card Space ] --+
+                       | (Yes)                                          |
+                       +-------------> [ Select Existing Card Space ] <--+
+                                               |
+                                               V
++----------------------------------------------+-------------------------------------------------+
+|                 ACTIVE CARD SPACE VIEW (List of Flashcards)                                   |
+|                                                                                                 |
+| Actions:                                                                                        |
+|  - Create Flashcard Stub ---------------------> [ Enter Word/Phrase ] --> [ SYSTEM: Saves Stub ] |
+|  - Edit Flashcard (select card) --+                                                             |
+|  - Study Single Card (select card) ----------+                                                  |
+|  - Study Deck (all in space) ---------------+                                                  |
+|  - Delete Flashcard (select card) --> [ Confirm ] --> [ SYSTEM: Deletes Card ]                   |
++-------------------------------------------------------------------------------------------------+
+    |                            |                                |
+    |                            |                                V
+    |                            |      +-------------------------------------------------------------+
+    |                            |      |                       STUDY DECK VIEW                       |
+    |                            |      |  - SYSTEM: Displays current card (Word/Image)                 |
+    |                            |      |  User Actions:                                              |
+    |                            |      |    - Next Card ----------------> [ SYSTEM: Shows Next Card ]  |
+    |                            |      |    - Previous Card -------------> [ SYSTEM: Shows Prev Card ] |
+    |                            +-----(Shared Study Card Logic - see below)-------------------------+
+    |                                                                     |
+    V                                                                     V
++-------------------------------------------------+     +-------------------------------------------------------------+
+|              EDIT FLASHCARD VIEW                |     |                     STUDY SINGLE CARD VIEW                    |
+|  - SYSTEM: Displays Card & Existing Fields      |     |  - SYSTEM: Displays current card (Word/Image)                 |
+|  User Actions:                                  |     |  User Actions:                                              |
+|    - Add/Edit Text for Field (e.g., Definition)|     |    - Flip Card --> [ SYSTEM: Toggles Front/Back Display ]     |
+|    - Upload/Change Image                       |     |    - Back to List ---------> (Returns to Active Card Space) |
+|    - [LLM] Generate Definition ---+             |     |    - Engage Live Tutor --+                                    |
+|    - [LLM] Generate Word Family ---+            |     +--------------------------|------------------------------------+
+|    - [LLM] Generate Example Sent. ---+          |                                V
+|    - [LLM] Generate Pairwise Q&A ---+           |      +-------------------------------------------------------------+
+|    - Delete Field Entry                        |      |                         LIVE TUTOR VIEW                       |
+|    - Done Editing --> (Returns to Active Space)|      |  (Context: Current Flashcard)                               |
++------------------|------------------------------+      |  Tabs:                                                      |
+                   |                                     |    1. Tricky Questions                                      |
+                   |                                     |       - Get Question ---+                                   |
+                   |                                     |       - User Answers --> Check --> [LLM] Feedback ---+    |
+                   |                                     |    2. MCQs                                                  |
+                   |                                     |       - Generate MCQ ---+                                   |
+                   |                                     |       - User Selects --> Check --> [LLM] Feedback ---+  |
+                   |                                     |    3. Write & Grade                                         |
+                   |                                     |       - User Writes --> Get Feedback --> [LLM] Feedback ---+ |
+                   |                                     |    4. Semantic Synonyms/Antonyms                            |
+                   |                                     |       - Generate Synonym ---+                               |
+                   |                                     |       - Generate Antonym ---+                               |
+                   +-------------------------------------+      |       (Displays Term, Explanation, Example)           |
+                                                                |    (All tutor interactions saved to DB)               |
+                                                                +-------------------------------------------------------------+
+
+Shared Logic for LLM Generation (triggered from Edit or Live Tutor):
+  [ User Action requiring LLM ]
+              |
+              V
+  [ App determines Active LLM (Ollama/Gemini) ]
+              |
+              V
+  [ SYSTEM: Constructs Prompt for LLM ]
+              |
+              V
+  [ LLM PROCESSOR (Ollama/Gemini) sends request ]
+              |
+              V
+  [ LLM (External/Local) processes & returns response ]
+              |
+              V
+  [ LLM PROCESSOR parses response ]
+              |
+              V
+  [ App updates UI with generated content / feedback ]
+  [ App (optionally) saves to DB (e.g., Flashcard Field, Tutor Interaction) ]
+
+
+Sidebar Actions (Always Available):
+  - Manage Card Spaces (Create/Select)
+  - Settings:
+      - Toggle Ollama/Gemini
+      - Configure Ollama (Endpoint, Model)
+      - Enter/Save Gemini API Key
+      --> [ SYSTEM: Saves settings, Re-initializes LLM Processor if needed ]
+```
+
+## Architecture Diagram
+```
++------------------------------------------------------------------------------------------------------------+
+|                                              USER INTERFACE                                                |
+|                                     (Streamlit - main_flashcard_app.py)                                    |
+|                                                                                                            |
+|    +--------------------------+      +---------------------------+      +--------------------------------+ |
+|    |   Sidebar (Spaces,       |----->|    Session State Mgmt     |<---->|       UI Components            | |
+|    |    Settings Management)   |      |    (st.session_state)     |      |       (ui_components.py)       | |
+|    +--------------------------+      +---------------------------+      |         - List View            | |
+|             ^   |                                                       |         - Edit View            | |
+|             |   |                                                       |         - Study Views (Single/Deck)| |
+|             |   |                                                       |         - Live Tutor Tabs        | |
+|             |   +-------------------------------------------------------+--------------------------------+ |
+|             |                                        |         ^                                         |
++-------------|----------------------------------------|---------|-----------------------------------------+
+              | (User Interactions,                     |         | (Render Commands,
+              |  LLM Request Triggers)                  |         |  Data Display)
+              |                                        V         |
++-------------+----------------------------------------+---------------------------------------------------+
+|                                   APPLICATION LOGIC                                                       |
+|                                (main_flashcard_app.py, tutor_logic.py)                                  |
+|                                                                                                           |
+|    - View Routing                                                                                         |
+|    - LLM Call Orchestration (generate_with_active_llm)                                                    |
+|    - Tutor Feature Logic (prompting, response processing from tutor_logic.py)                             |
+|    - Data Formatting for UI                                                                               |
+|                       |                                 ^                                                 |
+|                       | (Data Requests, LLM Requests)   | (Formatted Data, LLM Responses)                 |
+|                       V                                 |                                                 |
++-----------------------+---------------------------------+-------------------------------------------------+
+|      Data Layer       |                                 |                  LLM Abstraction Layer          |
+|  (db_utils.py)        |                                 |                  (llm_processors.py)            |
+|                       |                                 |                                                 |
+| +-------------------+ |                                 |  +-----------------------+     +--------------+ |
+| | SQLite Database   | |                                 |  | OllamaLlamaProcessor  |---->| Ollama API   | |
+| | (flashcard_db.sql)| |                                 |  +-----------------------+     | (Local LLM)  | |
+| |  - Card Spaces    | |                                 |                              +--------------+ |
+| |  - Flashcards     | |                                 |  +-----------------------+     +--------------+ |
+| |  - FlashcardFields| |                                 |  |   GeminiAPIProcessor  |---->| Gemini API   | |
+| |  - TutorInteracts | |                                 |  +-----------------------+     | (Cloud LLM)  | |
+| +-------------------+ |                                 |                                +--------------+ |
+|                       |                                 |                                                 |
+| +-------------------+ |                                 +-------------------------------------------------+
+| | Media Storage     | |
+| | (flashcard_media/)| |
+| |  - Images         | |
+| +-------------------+ |
+|                       |
++-----------------------+
+
+External Dependencies:
+  - Streamlit (Web Framework, UI Widgets)
+  - httpx (HTTP client for Ollama)
+  - google-generativeai (Python client for Gemini API)
+  - SQLite3 (Database engine)
+```
