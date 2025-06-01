@@ -1,4 +1,4 @@
-# Ai Flashcard Maker: AI-Powered English Learning Flashcard Generator
+# AI Flashcard Maker: AI-Powered English Learning Flashcard Generator
 
 Ai Flashcard Maker is an intelligent flashcard application designed to help English language learners create, manage, and study vocabulary and phrases with the power of Large Language Models (LLMs). It goes beyond traditional flashcard apps by leveraging AI to generate rich content, provide interactive tutoring, and offer deeper insights into language usage.
 
