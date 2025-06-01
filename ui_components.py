@@ -60,7 +60,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
                 else: st.error(f"Could not generate tricky question: {q_data_result.get('error', 'Unknown error') if isinstance(q_data_result, dict) else 'LLM call failed.'}")
             st.rerun()
 
-# ui_components.py -> render_live_tutor_tabs -> with tab_tricky:
 
         current_q_data = st.session_state.get(q_data_key)
         if current_q_data:
@@ -74,10 +73,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
                 options_for_radio = options_source
             elif isinstance(options_source, dict): # LLM returned a dict {'a': val_a, 'b': val_b}
                 module_logger.info("Tricky question options received as dict, converting to list for radio.")
-                # We need to ensure a consistent order, e.g., by sorting keys or assuming 'a','b','c','d'
-                # For simplicity, let's assume keys 'a', 'b', 'c', 'd' if they exist, or sort other keys.
-                # A more robust way is to ensure LLM returns list or a dict with ordered keys we expect.
-                # For now, if it's a dict, we'll try to get values in a,b,c,d order if present, else sorted keys.
                 if all(k in options_source for k in ['a', 'b', 'c', 'd']):
                     options_for_radio = [
                         options_source['a'], 
@@ -116,9 +111,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
                     chosen_option_from_state = st.session_state.get(mcq_choice_key)
                     if chosen_option_from_state is not None:
                         correct_letter = current_q_data.get("correct_option_letter", "").upper()
-                        
-                        # Determine the correct index based on the original options_for_radio list
-                        # and the letter provided by the LLM.
                         chosen_idx = -1
                         try:
                             chosen_idx = options_for_radio.index(chosen_option_from_state)
@@ -148,13 +140,10 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
                         tutor_logic.save_tutor_interaction_db(current_card_id, "tricky_question", current_q_data, str(chosen_option_from_state), final_feedback)
                         st.rerun()
                     else: st.warning("Please select an option.")
-            # ... (rest of open-ended question logic) ...
             else: # No valid options found for MCQ
                 module_logger.warning(f"No options to display for Tricky Question MCQ. Data: {current_q_data}")
                 st.caption("Could not load options for this question.")
-                # (open-ended question logic would follow here if that's the fallback)
                 st.session_state[user_answer_key] = st.text_area("Your Answer (if open-ended):", value=st.session_state[user_answer_key], key=f"tutor_user_answer_tricky_open_{current_card_id}", height=100)
-                # ... (rest of open-ended check button logic) ...
 
         feedback_to_display = st.session_state.get(feedback_key)
         if feedback_to_display:
@@ -165,7 +154,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
         st.markdown("#### Practice with MCQs")
         past_mcqs = tutor_logic.get_past_tutor_interactions(current_card_id, "mcq")
         if past_mcqs:
-            # ... (display past MCQs logic - seems okay)
             with st.expander("Past MCQs", expanded=False):
                 for i, interaction in enumerate(past_mcqs):
                     mcq_data = interaction.get('llm_generated_content', {})
@@ -212,7 +200,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
             elif isinstance(options_source_mcq, dict):
                 module_logger.info("Simple MCQ options received as dict, converting to list for radio.")
                 temp_options_list = []
-                # Try specific keys first for consistent ordering if LLM uses them
                 for key_char in ['A', 'B', 'C', 'D', 'a', 'b', 'c', 'd']: # Check common MCQ keys
                     if key_char in options_source_mcq:
                         temp_options_list.append(str(options_source_mcq[key_char]))
@@ -235,8 +222,8 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
 
                 selected_option_value_mcq = st.radio(
                     "Your answer:", 
-                    options_for_radio_mcq, # CORRECTED: Use the processed list
-                    format_func=lambda x: html.escape(x), # x is already string from options_for_radio_mcq
+                    options_for_radio_mcq, 
+                    format_func=lambda x: html.escape(x), 
                     key=f"tutor_mcq_radio_{current_card_id}_{current_mcq_data.get('question', '')[:10]}", 
                     index=idx_for_radio_mcq
                 )
@@ -276,7 +263,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
                 if "Correct!" in feedback_mcq_display: st.success(feedback_mcq_display, icon="✅")
                 else: st.error(feedback_mcq_display)
     
-    # ... (tab_write and tab_syn_ant remain the same as the "Aiming for final version" code)
     with tab_write:
         st.markdown("#### Write & Grade")
         
@@ -362,7 +348,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
             else:
                 st.warning("Please write something to get feedback.")
         
-        # Display current feedback (now expected to be a plain text paragraph)
         current_feedback_text = st.session_state.get(feedback_key)
         if current_feedback_text:
             st.markdown("---") # Separator
@@ -371,14 +356,12 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
 
     with tab_syn_ant:
         st.markdown("#### Semantic Synonyms & Antonyms")
-        # ... (display past interactions logic remains the same)
         past_syn = tutor_logic.get_past_tutor_interactions(current_card_id, "synonym")
         past_ant = tutor_logic.get_past_tutor_interactions(current_card_id, "antonym")
 
         col_syn_disp, col_ant_disp = st.columns(2)
         with col_syn_disp:
             st.markdown("**Generated Synonyms**")
-            # ... (display past_syn)
             if past_syn:
                 for i, interaction in enumerate(past_syn):
                     item_data = interaction.get('llm_generated_content', {})
@@ -421,7 +404,6 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
                 st.rerun()
         with col_ant_disp:
             st.markdown("**Generated Antonyms**")
-            # ... (display past_ant)
             if past_ant:
                 for i, interaction in enumerate(past_ant):
                     item_data = interaction.get('llm_generated_content', {})
@@ -464,12 +446,7 @@ def render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, gen
 
 # --- render_study_single_card_view ---
 def render_study_single_card_view(card_id: str, space_id: str, generate_with_llm_func_ref):
-    module_logger.info(f"Rendering SINGLE CARD view for card_id: {card_id}") # Corrected
-    # ... (The rest of render_study_single_card_view as provided in the "Aiming for final version" response, 
-    #      making sure it calls render_live_tutor_tabs at the end and uses module_logger for its logs)
-    # Copy the full function body from previous correct version, ensuring it uses 'module_logger'
-    # and calls render_live_tutor_tabs(card_data, card_id, tutor_state_key_base, generate_with_llm_func_ref)
-
+    module_logger.info(f"Rendering SINGLE CARD view for card_id: {card_id}") 
     card_data = run_query("SELECT id, word_phrase, image_filename FROM flashcards WHERE id = ? AND card_space_id = ?", (card_id, space_id), fetchone=True)
     if not card_data: module_logger.error(f"Flashcard not found for study: {card_id}"); st.error("Flashcard for study not found."); st.session_state.current_view_mode = 'list_cards'; st.session_state.studying_flashcard_id = None; st.rerun(); return
 
@@ -551,9 +528,6 @@ def render_study_single_card_view(card_id: str, space_id: str, generate_with_llm
 # --- render_study_deck_view ---
 def render_study_deck_view(space_id: str, generate_with_llm_func_ref):
     module_logger.info(f"Rendering DECK view for space_id: {space_id}") # Corrected
-    # ... (The rest of render_study_deck_view as provided in the "Aiming for final version" response)
-    # Ensure all its internal logger calls also use module_logger
-    # and it calls render_live_tutor_tabs(card_data, current_card_id, tutor_state_key_base, generate_with_llm_func_ref)
     deck_cards_ids = run_query("SELECT id FROM flashcards WHERE card_space_id = ? ORDER BY created_at ASC", (space_id,), fetchall=True)
     if not deck_cards_ids: module_logger.warning(f"No cards in deck for space {space_id}"); st.warning("No cards in this space to study as a deck."); st.session_state.current_view_mode = 'list_cards'; st.session_state.studying_deck_space_id = None; st.rerun(); return
     total_cards = len(deck_cards_ids)
@@ -645,9 +619,7 @@ def render_study_deck_view(space_id: str, generate_with_llm_func_ref):
 
 # --- render_list_flashcards_view ---
 def render_list_flashcards_view(space_id: str):
-    module_logger.debug(f"Rendering LIST CARDS view for space_id: {space_id}") # Corrected
-    # ... (Full function as provided in "Aiming for final version")
-    # Ensure its internal logger calls also use module_logger
+    module_logger.debug(f"Rendering LIST CARDS view for space_id: {space_id}") 
     with st.expander("➕ Add New Flashcard Stub", expanded=True):
         with st.form("new_flashcard_stub_form_v2", clear_on_submit=True): # Unique form key
             word_phrase_input = st.text_input("Word or Phrase for New Card*", key="fc_stub_word_list_view_v2")
@@ -693,10 +665,7 @@ def render_list_flashcards_view(space_id: str):
 
 # --- render_edit_flashcard_view ---
 def render_edit_flashcard_view(card_id: str, space_id: str, generate_with_llm_func_ref):
-    module_logger.debug(f"Rendering EDIT CARD view for card_id: {card_id}") # Corrected
-    # ... (Full function as provided in "Aiming for final version")
-    # Ensure its internal logger calls also use module_logger
-    # and LLM calls use generate_with_llm_func_ref
+    module_logger.debug(f"Rendering EDIT CARD view for card_id: {card_id}") 
     card_data = run_query("SELECT id, word_phrase, image_filename FROM flashcards WHERE id = ? AND card_space_id = ?", (card_id, space_id), fetchone=True)
     if not card_data: module_logger.error(f"Flashcard not found for edit: {card_id}"); st.error("Flashcard not found."); st.session_state.current_view_mode = 'list_cards'; st.session_state.editing_flashcard_id = None; st.rerun(); return
     st.subheader(f"✏️ Editing Card: {html.escape(card_data['word_phrase'])}")
