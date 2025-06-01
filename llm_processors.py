@@ -90,7 +90,7 @@ class GeminiAPIProcessor:
                     contents=current_contents_for_api, 
                     config=generation_config_obj # This contains response_mime_type="text/plain"
                 )
-                for chunk in response_stream: # The error happens here, before we can access chunk.text
+                for chunk in response_stream: 
                     current_chunk_text = ""
                     if hasattr(chunk, 'text') and chunk.text:
                         current_chunk_text = chunk.text
@@ -103,11 +103,6 @@ class GeminiAPIProcessor:
                 return full_text_response.strip()
             except json.JSONDecodeError as e_json_stream: # Explicitly catch JSONDecodeError here
                 logger.error(f"GeminiAPIProc Inst:{self.instance_id_log} JSONDecodeError during content streaming: {e_json_stream}. This can happen if text/plain is expected but chunks are parsed as JSON by the lib.", exc_info=True)
-                # If we expected text, we might have accumulated something before the error.
-                # Or, the entire response was just text and the lib failed on the first non-JSON chunk.
-                # This is tricky because the error happens *inside* the library's iteration.
-                # For now, if this specific error happens, we assume the accumulated text (if any) might be it,
-                # or we return an error indicating a streaming/parsing problem.
                 if full_text_response: # If some text was collected before the JSON error
                     logger.warning(f"GeminiAPIProc Inst:{self.instance_id_log} Returning partially collected text due to JSONDecodeError in stream: '{full_text_response[:100]}...'")
                     return full_text_response.strip() 
